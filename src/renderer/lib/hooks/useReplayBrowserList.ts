@@ -28,6 +28,11 @@ export const useReplayBrowserNavigation = () => {
     history.push(pageUrl);
   };
 
+  const goToReplayAnalysisPage = () => {
+    const pageUrl = `/main/replays/analysis`;
+    navigate(pageUrl);
+  };
+
   const goToReplayStatsPage = (filePath: string) => {
     const encodedPath = encodeURIComponent(filePath);
     const pageUrl = `/main/replays/${encodedPath}`;
@@ -41,6 +46,7 @@ export const useReplayBrowserNavigation = () => {
 
   return {
     lastPath,
+    goToReplayAnalysisPage,
     goToReplayStatsPage,
     goToReplayList,
   };

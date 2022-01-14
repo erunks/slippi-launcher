@@ -15,6 +15,9 @@ export const ReplayBrowserPage: React.FC = () => {
 
   return (
     <Switch>
+      <Route path={`${path}/analysis`}>
+        <AnalysisPage goBack={() => history.push(path)} parent={path} />
+      </Route>
       <Route path={`${path}/list`}>
         <ReplayBrowser />
       </Route>
@@ -27,6 +30,8 @@ export const ReplayBrowserPage: React.FC = () => {
     </Switch>
   );
 };
+
+const AnalysisPage: React.FC<{ parent: string; goBack: () => void }> = () => <div>Replay Analysis</div>;
 
 const ChildPage: React.FC<{ parent: string; goBack: () => void }> = () => {
   const { filePath } = useParams<Record<string, any>>();

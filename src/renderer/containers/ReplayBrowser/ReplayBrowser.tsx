@@ -47,7 +47,7 @@ export const ReplayBrowser: React.FC = () => {
 
   const resetFilter = useReplayFilter((store) => store.resetFilter);
   const { files: filteredFiles, hiddenFileCount } = useReplayBrowserList();
-  const { goToReplayStatsPage } = useReplayBrowserNavigation();
+  const { goToReplayAnalysisPage, goToReplayStatsPage } = useReplayBrowserNavigation();
 
   const setSelectedItem = (index: number | null) => {
     if (index === null) {
@@ -161,6 +161,7 @@ export const ReplayBrowser: React.FC = () => {
               <FileSelectionToolbar
                 totalSelected={selectedFiles.length}
                 onSelectAll={fileSelection.selectAll}
+                onAnalyze={goToReplayAnalysisPage}
                 onPlay={() => viewReplays(selectedFiles.map((path) => ({ path })))}
                 onClear={fileSelection.clearSelection}
                 onDelete={() => {

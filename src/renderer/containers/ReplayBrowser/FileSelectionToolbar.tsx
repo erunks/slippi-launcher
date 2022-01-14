@@ -1,9 +1,12 @@
 /** @jsx jsx */
 import { css, jsx } from "@emotion/react";
 import styled from "@emotion/styled";
+import { useAccount } from "@/lib/hooks/useAccount";
 import Button from "@material-ui/core/Button";
+import Tooltip from "@material-ui/core/Tooltip";
 import BlockIcon from "@material-ui/icons/Block";
 import DeleteIcon from "@material-ui/icons/Delete";
+import EqualizerIcon from "@material-ui/icons/Equalizer";
 import PlayArrowIcon from "@material-ui/icons/PlayArrow";
 import SelectAllIcon from "@material-ui/icons/SelectAll";
 import React from "react";
@@ -12,6 +15,7 @@ import { ConfirmationModal } from "@/components/ConfirmationModal";
 
 export interface FileSelectionToolbarProps {
   totalSelected: number;
+  onAnalyze: () => void;
   onSelectAll: () => void;
   onPlay: () => void;
   onClear: () => void;
@@ -20,12 +24,36 @@ export interface FileSelectionToolbarProps {
 
 export const FileSelectionToolbar: React.FC<FileSelectionToolbarProps> = ({
   totalSelected,
+  onAnalyze,
   onSelectAll,
   onPlay,
   onClear,
   onDelete,
 }) => {
   const [showDeletePrompt, setShowDeletePrompt] = React.useState(false);
+  const currentUser = useAccount((store) => store.user);
+  const playKey = useAccount((store) => store.playKey);
+  const userIsLoggedIn = currentUser && playKey;
+
+  const AnalyzeAllButton = (
+    <Button
+      disabled={!userIsLoggedIn}
+      color="primary"
+      variant="contained"
+      size="small"
+      onClick={onAnalyze}
+      startIcon={<EqualizerIcon />}
+    >
+      Analyze All
+    </Button>
+  );
+  const renderAnalyzeAllButton = userIsLoggedIn ? (
+    AnalyzeAllButton
+  ) : (
+    <Tooltip title="Login to analyze all selected replays" placement="top">
+      <span>{AnalyzeAllButton}</span>
+    </Tooltip>
+  );
 
   if (totalSelected === 0) {
     return null;
@@ -74,6 +102,7 @@ export const FileSelectionToolbar: React.FC<FileSelectionToolbarProps> = ({
           >
             Select All
           </Button>
+          {renderAnalyzeAllButton}
           <Button color="primary" variant="contained" size="small" onClick={onPlay} startIcon={<PlayArrowIcon />}>
             Play All
           </Button>
