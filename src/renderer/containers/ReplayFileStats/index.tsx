@@ -7,24 +7,23 @@ import Tooltip from "@material-ui/core/Tooltip";
 import ErrorIcon from "@material-ui/icons/Error";
 import FolderIcon from "@material-ui/icons/Folder";
 import HelpIcon from "@material-ui/icons/Help";
-import { ipc_calculateGameStats } from "@replays/ipc";
 import { FileResult } from "@replays/types";
 import { colors } from "common/colors";
 import { shell } from "electron";
 import _ from "lodash";
 import React from "react";
-import { useQuery } from "react-query";
 
 import { BasicFooter } from "@/components/Footer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { IconMessage } from "@/components/Message";
+import { useLoadReplayFile } from "@/lib/hooks/useLoadReplayFile";
 import { useMousetrap } from "@/lib/hooks/useMousetrap";
 import { withFont } from "@/styles/withFont";
 
 import { GameProfile } from "./GameProfile";
 import { GameProfileHeader } from "./GameProfileHeader";
 
-const Outer = styled.div`
+export const Outer = styled.div`
   position: relative;
   flex: 1;
   display: flex;
@@ -32,7 +31,7 @@ const Outer = styled.div`
   overflow: hidden;
 `;
 
-const Content = styled.div`
+export const Content = styled.div`
   display: flex;
   flex: 1;
   overflow: auto;
@@ -52,16 +51,10 @@ export interface ReplayFileStatsProps {
 export const ReplayFileStats: React.FC<ReplayFileStatsProps> = (props) => {
   const { filePath } = props;
 
-  const gameStatsQuery = useQuery(["loadStatsQuery", filePath], async () => {
-    const queryRes = await ipc_calculateGameStats.renderer!.trigger({ filePath: filePath });
-    if (!queryRes.result) {
-      console.error(`Error calculating game stats: ${filePath}`, queryRes.errors);
-      throw new Error(`Error calculating game stats ${filePath}`);
-    }
-    return queryRes.result;
-  });
-  const loading = gameStatsQuery.isLoading;
-  const error = gameStatsQuery.error as any;
+  const gameStatsQuery = useLoadReplayFile(filePath);
+
+  const isLoading = gameStatsQuery.isLoading;
+  const error = gameStatsQuery.error as Error;
 
   const file = gameStatsQuery.data?.file ?? props.file;
   const numPlayers = file?.settings.players.length;
@@ -69,17 +62,17 @@ export const ReplayFileStats: React.FC<ReplayFileStatsProps> = (props) => {
 
   // Add key bindings
   useMousetrap("escape", () => {
-    if (!loading) {
+    if (!isLoading) {
       props.onClose();
     }
   });
   useMousetrap("left", () => {
-    if (!loading) {
+    if (!isLoading) {
       props.onPrev();
     }
   });
   useMousetrap("right", () => {
-    if (!loading) {
+    if (!isLoading) {
       props.onNext();
     }
   });
@@ -113,15 +106,9 @@ export const ReplayFileStats: React.FC<ReplayFileStatsProps> = (props) => {
 
   return (
     <Outer>
-      <GameProfileHeader
-        {...props}
-        file={file}
-        disabled={loading}
-        stats={gameStatsQuery.data?.stats ?? null}
-        onPlay={props.onPlay}
-      />
+      <GameProfileHeader {...props} file={file} disabled={isLoading} stats={gameStats} onPlay={props.onPlay} />
       <Content>
-        {!file || loading ? (
+        {!file || isLoading ? (
           <LoadingScreen message={"Crunching numbers..."} />
         ) : numPlayers !== 2 ? (
           <IconMessage Icon={ErrorIcon} label="Game stats for doubles is unsupported" />
