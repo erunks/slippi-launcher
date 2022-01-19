@@ -55,6 +55,27 @@ export const TableRow = styled.tr`
   }
 `;
 
+export interface TableSectionProps {
+  headerTitle: string;
+  columnCount: number;
+  children: React.ReactNode;
+}
+
+export const TableSection: React.FC<TableSectionProps> = ({ headerTitle, columnCount, children }) => {
+  const lowercaseHeader = headerTitle.toLowerCase();
+
+  return (
+    <React.Fragment>
+      <thead key={`${lowercaseHeader}-header`}>
+        <tr>
+          <TableSubHeaderCell colSpan={columnCount}>{headerTitle}</TableSubHeaderCell>
+        </tr>
+      </thead>
+      <tbody key={`${lowercaseHeader}-body`}>{children}</tbody>
+    </React.Fragment>
+  );
+};
+
 interface GrayableImageProps {
   gray?: boolean;
 }

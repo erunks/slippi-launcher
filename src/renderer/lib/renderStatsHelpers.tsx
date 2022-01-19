@@ -9,6 +9,19 @@ import _ from "lodash";
 import * as T from "@/containers/ReplayFileStats/TableStyles";
 import { getCharacterIcon } from "./utils";
 
+const numberIsHigher = (a: number, b: number) => Number.isNaN(b) || a > b;
+const numberIsLower = (a: number, b: number) => Number.isNaN(b) || a < b;
+export const lCancelValueMapper = (val: any) => {
+  if (!val) {
+    return "N/A";
+  }
+
+  const { fail, success } = val;
+  const total = success + fail;
+  const rate = total === 0 ? 0 : (success / total) * 100;
+  return `${rate.toFixed(0)}% (${success} / ${total})`;
+};
+
 export const renderPlayerHeaders = (file: FileResult) => {
   const tableHeaders = [];
   for (const p of file.settings.players) {
@@ -40,14 +53,19 @@ export const renderPlayerHeaders = (file: FileResult) => {
   );
 };
 
+interface MutliStatFieldOptions {
+  fieldPaths?: string | string[];
+  arrPathExtension?: string | string[];
+  highlight?: (v: any[], ov: any[]) => boolean;
+  valueMapper?: (a: any) => string;
+}
+
 export const renderMultiStatField = (
   stats: StatsType,
   header: string,
   arrPath: string | string[],
-  fieldPaths: string | string[] | null,
-  highlight?: (v: any[], ov: any[]) => boolean,
-  valueMapper?: (a: any) => string,
-  arrPathExtension?: string | string[],
+  options?: MutliStatFieldOptions,
+  renderSencondPlayerStat = true,
 ) => {
   const key = `standard-field-${header}`;
 
@@ -62,20 +80,23 @@ export const renderMultiStatField = (
       </T.TableRow>
     );
   }
-  const player1Item = arrPathExtension ? _.get(itemsByPlayer[0], arrPathExtension) : itemsByPlayer[0] || {};
-  const player2Item = arrPathExtension ? _.get(itemsByPlayer[1], arrPathExtension) : itemsByPlayer[1] || {};
+  const player1Item = options?.arrPathExtension
+    ? _.get(itemsByPlayer[0], options.arrPathExtension)
+    : itemsByPlayer[0] || {};
+  const player2Item = options?.arrPathExtension
+    ? _.get(itemsByPlayer[1], options.arrPathExtension)
+    : itemsByPlayer[1] || {};
   const generateValues = (item: any) => {
-    if (fieldPaths !== null) {
+    if (options?.fieldPaths !== undefined) {
       return _.chain(item)
-        .pick(fieldPaths)
+        .pick(options.fieldPaths)
         .toArray()
-        .map((v) => (valueMapper ? valueMapper(v) : v))
+        .map((v) => (options?.valueMapper ? options.valueMapper(v) : v))
         .value();
     }
 
-    if (valueMapper) {
-      // return _.filter([valueMapper(item)], removeNullValues);
-      return [valueMapper(item)];
+    if (options?.valueMapper) {
+      return [options.valueMapper(item)];
     }
 
     return [item];
@@ -87,12 +108,14 @@ export const renderMultiStatField = (
   return (
     <T.TableRow key={key}>
       <T.TableCell>{header}</T.TableCell>
-      <T.TableCell highlight={highlight && highlight(p1Values, p2Values)}>
+      <T.TableCell highlight={options?.highlight && options.highlight(p1Values, p2Values)}>
         <div>{p1Values.join(" / ")}</div>
       </T.TableCell>
-      <T.TableCell highlight={highlight && highlight(p2Values, p1Values)}>
-        <div>{p2Values.join(" / ")}</div>
-      </T.TableCell>
+      {renderSencondPlayerStat && (
+        <T.TableCell highlight={options?.highlight && options.highlight(p2Values, p1Values)}>
+          <div>{p2Values.join(" / ")}</div>
+        </T.TableCell>
+      )}
     </T.TableRow>
   );
 };
@@ -103,6 +126,7 @@ export const renderRatioStatField = (
   arrPath: string,
   fieldPath: string,
   ratioRenderer: (ratio: RatioType, oppRatio: RatioType) => JSX.Element,
+  renderSencondPlayerStat = true,
 ) => {
   const arr = _.get(stats, arrPath, []);
   const itemsByPlayer = arr;
@@ -125,7 +149,7 @@ export const renderRatioStatField = (
     <T.TableRow key={key}>
       <T.TableCell>{header}</T.TableCell>
       {displayRenderer(true)}
-      {displayRenderer(false)}
+      {renderSencondPlayerStat && displayRenderer(false)}
     </T.TableRow>
   );
 };
@@ -136,26 +160,34 @@ export const renderSimpleRatioField = (
   arrPath: string,
   fieldPath: string,
   highlightCondition: (a: number, b: number) => boolean,
+  renderSencondPlayerStat = true,
 ) => {
-  return renderRatioStatField(stats, header, arrPath, fieldPath, (ratio: RatioType, oppRatio: RatioType) => {
-    const playerRatio = _.get(ratio, "ratio", null);
-    const oppRatioType = _.get(oppRatio, "ratio", null);
+  return renderRatioStatField(
+    stats,
+    header,
+    arrPath,
+    fieldPath,
+    (ratio: RatioType, oppRatio: RatioType) => {
+      const playerRatio = _.get(ratio, "ratio", null);
+      const oppRatioType = _.get(oppRatio, "ratio", null);
 
-    if (playerRatio === null) {
+      if (playerRatio === null) {
+        return (
+          <T.TableCell>
+            <div>N/A</div>
+          </T.TableCell>
+        );
+      }
+      const fixedPlayerRatio = playerRatio.toFixed(1);
+      const fixedOppRatio = oppRatioType !== null ? oppRatioType.toFixed(1) : "Infinity";
       return (
-        <T.TableCell>
-          <div>N/A</div>
+        <T.TableCell highlight={highlightCondition(parseFloat(fixedPlayerRatio), parseFloat(fixedOppRatio))}>
+          <div>{fixedPlayerRatio}</div>
         </T.TableCell>
       );
-    }
-    const fixedPlayerRatio = playerRatio.toFixed(1);
-    const fixedOppRatio = oppRatioType !== null ? oppRatioType.toFixed(1) : "Infinity";
-    return (
-      <T.TableCell highlight={highlightCondition(parseFloat(fixedPlayerRatio), parseFloat(fixedOppRatio))}>
-        <div>{fixedPlayerRatio}</div>
-      </T.TableCell>
-    );
-  });
+    },
+    renderSencondPlayerStat,
+  );
 };
 
 export const renderPercentFractionField = (
@@ -196,33 +228,15 @@ export const renderPercentFractionField = (
 };
 
 export const renderHigherSimpleRatioField = (stats: StatsType, header: string, field: string) => {
-  return renderSimpleRatioField(stats, header, "overall", field, (fixedPlayerRatio: number, fixedOppRatio: number) => {
-    const oppIsNull = fixedPlayerRatio && Number.isNaN(fixedOppRatio);
-    const isHigher = fixedPlayerRatio > fixedOppRatio;
-    return oppIsNull || isHigher;
-  });
-};
-
-export const renderLowerSimpleRatioField = (stats: StatsType, header: string, field: string) => {
-  return renderSimpleRatioField(stats, header, "overall", field, (fixedPlayerRatio: number, fixedOppRatio: number) => {
-    const oppIsNull = fixedPlayerRatio && Number.isNaN(fixedOppRatio);
-    const isLower = fixedPlayerRatio < fixedOppRatio;
-    return oppIsNull || isLower;
-  });
+  return renderSimpleRatioField(stats, header, "overall", field, numberIsHigher);
 };
 
 export const renderHigherPercentFractionField = (stats: StatsType, header: string, field: string) => {
-  return renderPercentFractionField(
-    stats,
-    header,
-    "overall",
-    field,
-    (fixedPlayerRatio: number, fixedOppRatio: number) => {
-      const oppIsNull = fixedPlayerRatio && Number.isNaN(fixedOppRatio);
-      const isHigher = fixedPlayerRatio > fixedOppRatio;
-      return oppIsNull || isHigher;
-    },
-  );
+  return renderPercentFractionField(stats, header, "overall", field, numberIsHigher);
+};
+
+export const renderLowerSimpleRatioField = (stats: StatsType, header: string, field: string) => {
+  return renderSimpleRatioField(stats, header, "overall", field, numberIsLower);
 };
 
 export const renderCountPercentField = (
@@ -231,29 +245,37 @@ export const renderCountPercentField = (
   arrPath: string,
   fieldPath: string,
   highlightCondition: (a: number, b: number) => boolean,
+  renderSencondPlayerStat = true,
 ) => {
-  return renderRatioStatField(stats, header, arrPath, fieldPath, (ratio: RatioType, oppRatio: RatioType) => {
-    const playerCount = _.get(ratio, "count", 0);
-    const playerRatio = _.get(ratio, "ratio");
+  return renderRatioStatField(
+    stats,
+    header,
+    arrPath,
+    fieldPath,
+    (ratio: RatioType, oppRatio: RatioType) => {
+      const playerCount = _.get(ratio, "count", 0);
+      const playerRatio = _.get(ratio, "ratio");
 
-    const oppCount = _.get(oppRatio, "count", 0);
+      const oppCount = _.get(oppRatio, "count", 0);
 
-    let secondaryDisplay = null;
-    if (playerRatio !== null) {
-      secondaryDisplay = <div style={{ display: "inline-block" }}>({Math.round(playerRatio * 100)}%)</div>;
-    }
+      let secondaryDisplay = null;
+      if (playerRatio !== null) {
+        secondaryDisplay = <div style={{ display: "inline-block" }}>({Math.round(playerRatio * 100)}%)</div>;
+      }
 
-    return (
-      <T.TableCell highlight={highlightCondition(playerCount, oppCount)}>
-        <div>
-          <div style={{ display: "inline-block", marginRight: "8px" }}>{playerCount}</div>
-          {secondaryDisplay}
-        </div>
-      </T.TableCell>
-    );
-  });
+      return (
+        <T.TableCell highlight={highlightCondition(playerCount, oppCount)}>
+          <div>
+            <div style={{ display: "inline-block", marginRight: "8px" }}>{playerCount}</div>
+            {secondaryDisplay}
+          </div>
+        </T.TableCell>
+      );
+    },
+    renderSencondPlayerStat,
+  );
 };
 
 export const renderOpeningField = (stats: StatsType, header: string, field: string) => {
-  return renderCountPercentField(stats, header, "overall", field, (playerCount, oppCount) => playerCount > oppCount);
+  return renderCountPercentField(stats, header, "overall", field, numberIsHigher);
 };
