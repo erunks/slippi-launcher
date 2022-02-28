@@ -6,6 +6,7 @@ import { useReplayBrowserList, useReplayBrowserNavigation } from "@/lib/hooks/us
 import { useReplays } from "@/lib/hooks/useReplays";
 
 import { ReplayFileStats } from "../ReplayFileStats";
+import { ReplaysAnalysis } from "../ReplaysAnalysis";
 import { ReplayBrowser } from "./ReplayBrowser";
 
 export const ReplayBrowserPage: React.FC = () => {
@@ -31,7 +32,12 @@ export const ReplayBrowserPage: React.FC = () => {
   );
 };
 
-const AnalysisPage: React.FC<{ parent: string; goBack: () => void }> = () => <div>Replay Analysis</div>;
+const AnalysisPage: React.FC<{ parent: string; goBack: () => void }> = () => {
+  const selectedFiles = useReplays((store) => store.selectedFiles);
+  const { goToReplayList } = useReplayBrowserNavigation();
+
+  return <ReplaysAnalysis files={selectedFiles} total={selectedFiles.length} onClose={goToReplayList} />;
+};
 
 const ChildPage: React.FC<{ parent: string; goBack: () => void }> = () => {
   const { filePath } = useParams<Record<string, any>>();

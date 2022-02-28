@@ -25,7 +25,7 @@ import { getStageImage } from "@/lib/utils";
 
 import { PlayerInfo } from "./PlayerInfo";
 
-const Outer = styled.div`
+export const Outer = styled.div`
   margin-top: 10px;
   display: flex;
   align-items: center;
@@ -158,7 +158,7 @@ export const GameProfileHeader: React.FC<GameProfileHeaderProps> = ({
   );
 };
 
-const Header = styled.div<{
+export const Header = styled.div<{
   backgroundImage?: any;
 }>`
   z-index: 1;
